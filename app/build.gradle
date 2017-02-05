@@ -1,0 +1,71 @@
+buildscript {
+    repositories {
+        mavenCentral()
+        maven { url 'https://maven.fabric.io/public' }
+    }
+}
+apply plugin: 'com.android.application'
+
+android {
+    compileSdkVersion 24
+    buildToolsVersion "24.0.2"
+
+    def currentVersionCode = getVersionCode()
+
+    defaultConfig {
+        applicationId "com.secmaster.app"
+        minSdkVersion 16
+        targetSdkVersion 24
+        versionCode currentVersionCode
+        versionName "2.0." + currentVersionCode
+    }
+    signingConfigs {
+        release {
+            storeFile file("android.keystore")
+            storePassword "monitor"
+            keyAlias "wechat_monitor"
+            keyPassword "wechat_monitor"
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            shrinkResources false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+
+            applicationVariants.all { variant ->
+                variant.outputs.each { output ->
+                    def oldFile = output.outputFile
+                    if (variant.buildType.name.equals('release')) {
+                        def releaseApkName = "wechat_monitor_${defaultConfig.versionName}.apk"
+                        output.outputFile = new File(oldFile.parent, releaseApkName)
+                    }
+                }
+            }
+        }
+    }
+
+}
+
+dependencies {
+    compile 'com.sun.mail:android-mail:1.5.5'
+    compile 'com.sun.mail:android-activation:1.5.5'
+}
+
+def getVersionCode() {
+    def versionFile = file('version.properties')
+    if (versionFile.canRead()) {
+        def Properties versionProps = new Properties()
+        versionProps.load(new FileInputStream(versionFile))
+        def versionCode = versionProps['VERSION_CODE'].toInteger()
+        def runTasks = gradle.startParameter.taskNames
+        if ('assembleRelease' in runTasks) {
+            versionProps['VERSION_CODE'] = (++versionCode).toString()
+            versionProps.store(versionFile.newWriter(), null)
+        }
+        return versionCode
+    } else {
+        throw new GradleException("Could not find version.properties!")
+    }
+}
